@@ -23,7 +23,10 @@ const FormSchema = z.object({
 });
  
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateInvoice = FormSchema.omit({ date: true });
+// When updating we pass the `id` as the first argument to the action
+// so the form does not include an `id` field. Omit `id` from the
+// validation schema to avoid spurious "missing field" errors.
+const UpdateInvoice = FormSchema.omit({ date: true, id: true });
 
 export type State = {
   errors?: {
@@ -109,10 +112,15 @@ export async function updateInvoice(
 }
 
 export async function deleteInvoice(id: string) {
-  throw new Error('Failed to Delete Invoice');
- 
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Database Error: Failed to Delete Invoice.');
+  }
+
   revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
 }
 
 export async function authenticate(
